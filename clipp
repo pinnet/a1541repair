@@ -1,0 +1,110 @@
+LDX #$00      blink once, zero page
+            .DB $2C
+            LDX $6F       blink X+1 times for RAM/ROM err
+            TXS
+            TSX
+            LDA #$08      select LED bit in the port
+            ORA $1C00
+            JMP $FEEA     turn LED on, back to $EA7D
+            TYA
+            CLC
+            ADC #$01
+            BNE $EA7F
+            DEY
+            BNE $EA7E
+            LDA $1C00
+            AND #$F7      turn LED off
+            STA $1C00
+            TYA
+            CLC
+            ADC #$01
+            BNE $EA90     delay loop
+            DEY
+            BNE $EA8F
+            DEX
+            BPL $EA75
+            CPX #$FC
+            BNE $EA8E     wait for delay
+            BEQ $EA74             
+RESET       NOP
+            CLD
+            LDX #$FF
+            STX $1803     port A to output
+            INX
+            LDY #$00
+            LDX #$00
+.loop1      TXA
+            STA $00,X     erase zero page
+            INX
+            BNE .loop1
+            TXA
+            CMP $00,X     is byte erased?
+            BNE $EA6E     no, then to error display (blink)
+            INC $00,X
+            INY
+            BNE $EAB7
+            CMP $00,X
+            BNE $EA6E     error
+            STY $00,X
+            LDA $00,X
+            BNE $EA6E     error
+            INX
+            BNE $EAB2
+            INC $6F
+            STX $76
+            LDA #$00
+            STA $75
+            TAY
+            LDX #$20      test 32 pages
+            CLC
+            DEC $76
+            ADC ($75),Y
+            INY
+            BNE $EAD7
+            DEX
+            BNE $EAD5     test ROM
+            ADC #$00
+            TAX
+            CMP $76
+            BNE $EB1F     ROM error
+            CPX #$C0
+            BNE $EAC9
+            LDA #$01
+            STA $76
+            INC $6F
+            LDX #$07      test RAM, beginning at page 7
+            TYA
+            CLC
+            ADC $76
+            STA ($75),Y
+            INY
+            BNE $EAF2
+            INC $76
+            DEX
+            BNE $EAF2
+            LDX #$07
+            DEC $76
+            DEY
+            TYA
+            CLC
+            ADC $76
+            CMP ($75),Y
+            BNE $EB1F     RAM error
+            EOR #$FF
+            STA ($75),Y
+            EOR ($75),Y
+            STA ($75),Y
+            BNE $EB1F     RAM error
+            TYA
+            BNE $EB04
+            DEX
+            BNE $EB02     continue test
+            BEQ $EB22     ok
+            JMP $EA71     to error display
+
+            LDX #$45
+            TXS           initialize stack pointer
+            LDA $1C00
+            AND #$F7      turn LED off
+            STA $1C00
+                

@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name romboard)(type KiCad)(uri ${KIPRJMOD}/romboard.pretty)(options "")(descr ""))
+)
