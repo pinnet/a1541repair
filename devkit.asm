@@ -1,6 +1,6 @@
                 .CR     6502
-                .TF     wozmon.int,INT,8
-                .LF     wozmon.list
+                .TF     devkit.int,INT,8
+                .LF     devkit.list
 
 
 
@@ -8,7 +8,7 @@
 ;
 ;  The WOZ Monitor for the Apple 1
 ;  Written by Steve Wozniak 1976
-;
+;  Adapted for VIA DEVKIT BY Danny Arnold (c) 2021
 ;-------------------------------------------------------------------------
 
 
@@ -39,19 +39,19 @@ KBDCR           .EQ     $D011           PIA.A keyboard control register
 DSP             .EQ     $D012           PIA.B display output register
 DSPCR           .EQ     $D013           PIA.B display control register
 
-CIAORA          .EQ     $8001           CIA Output Register A
-CAIIRA          .EQ     $8001           CIA Input Register A
-CIADDRA         .EQ     $8003           CIA Data Direction Register A
+VIAORA          .EQ     $8001           VIA Output Register A
+VIAIRA          .EQ     $8001           VIA Input Register A
+VIADDRA         .EQ     $8003           VIA Data Direction Register A
 
-CIAORB          .EQ     $8000           CIA Output Register B
-CIAIRB          .EQ     $8000           CIA Input Register B    
-CIADDRB         .EQ     $8002           CIA Data Direction Register B  
+VIAORB          .EQ     $8000           VIA Output Register B
+VIAIRB          .EQ     $8000           VIA Input Register B    
+VIADDRB         .EQ     $8002           VIA Data Direction Register B  
 
-CIRSR           .EQ     $800A           CIA Shift Register
-CIAACR          .EQ     $800B           CIA Aux Control Register
-CIAPCR          .EQ     $800C           CIA Peripheral Control Register
-CIAIFR          .EQ     $800D           CIA Interrupt Flag Register
-CIAIER          .EQ     $800E           CIA Interrupt Enable Register
+VIASR           .EQ     $800A           VIA Shift Register
+VIAACR          .EQ     $800B           VIA Aux Control Register
+VIAPCR          .EQ     $800C           VIA Peripheral Control Register
+VIAIFR          .EQ     $800D           VIA Interrupt Flag Register
+VIAIER          .EQ     $800E           VIA Interrupt Enable Register
 
 ; KBD b7..b0 are inputs, b6..b0 is ASCII input, b7 is constant high
 ;     Programmed to respond to low to high KBD strobe
@@ -67,7 +67,19 @@ CIAIER          .EQ     $800E           CIA Interrupt Enable Register
 BS              .EQ     $DF             Backspace key, arrow left key
 CR              .EQ     $8D             Carriage Return
 ESC             .EQ     $9B             ESC key
-PROMPT          .EQ     '\'             Prompt character
+PROMPT          .EQ     '>'             Prompt character
+
+;-------------------------------------------------------------------------
+;  Begin DevKit ROM
+;-------------------------------------------------------------------------
+                .OR     $E000
+                .TA     $0000
+
+START
+                LDA     #0
+                JMP     RESET
+
+
 
 ;-------------------------------------------------------------------------
 ;  Let's get started
@@ -76,8 +88,16 @@ PROMPT          .EQ     '\'             Prompt character
 ;  line of the system. This ensures that the data direction registers
 ;  are selected.
 ;-------------------------------------------------------------------------
-                .ORG    $FD00
+                .NO     $FD00
                 .TA     $1D00
+;-------------------------------------------------------------------------
+;       Vector Table
+;-------------------------------------------------------------------------
+
+VEC_START      
+                JMP     START
+ 
+;------------------------------------------------------------------------                
 RESET           CLD                     Clear decimal arithmetic mode
                 CLI
                 LDY     #%0111.1111     Mask for DSP data direction reg
@@ -146,6 +166,8 @@ NEXTITEM        LDA     IN,Y            Get character
                 BEQ     SETSTOR         Set STOR mode! $BA will become $7B
                 CMP     #"I"
                 BEQ     CLRRAM
+                CMP     #"T"
+                BEQ     VEC_START
                 CMP     #"R"
                 BEQ     RUN             Run the program! Forget the rest
                 STX     L               Clear input value (X=0)
@@ -190,10 +212,10 @@ NOTHEX          CPY     YSAV            Was at least 1 hex digit given?
                 BNE     NEXTITEM        No carry!
                 INC     STH             Add carry to 'store index' high
 TONEXTITEM      JMP     NEXTITEM        Get next command item.
+;--------------------------------------------------------------------------
+;       Clear Memory
+;--------------------------------------------------------------------------
 
-;-------------------------------------------------------------------------
-;  RUN user's program from last opened location
-;-------------------------------------------------------------------------
 CLRRAM          LDA     #RTASMSG&$FF
                 STA     STRL
                 LDA     #RTASMSG>>8
@@ -213,8 +235,11 @@ CLRRAM          LDA     #RTASMSG&$FF
                 JSR     STRECHO
                 LDY     #$7F
                 JMP     NOTCR
-RUN             JMP     (XAML)          Run user's program
 
+;-------------------------------------------------------------------------
+;  RUN user's program from last opened location
+;-------------------------------------------------------------------------
+RUN             JMP     (XAML)          Run user's program
 ;-------------------------------------------------------------------------
 ;  We're not in Store mode
 ;-------------------------------------------------------------------------
@@ -364,7 +389,7 @@ BINBCD16
  
 CBIT1           ASL     MEMSZL       ; Shift out one bit             5
                 ROL     MEMSZL+1     ;                               5
-;               LDA     bcd+0       ;             
+;               LDA     bcd+0        ;             
                 ADC     BCD+0        ; And add into result           3
                 STA     BCD+0        ;                               3
                 ASL     MEMSZL       ;                               5
@@ -443,7 +468,7 @@ CBIT13          ASL     MEMSZL       ; Shift out one bit             5
                 STA     NUMSTR+0
                 RTS                  ; All Done.
 ;-----------------------------------------------------------------------------------                                             
-BOOTMSG         .AZ     / RC6502 WOZMON (c) Steve Wozniak 1976/,#$0A,#$0D,/(I)nit Memory ?/,#$0A,#$0D
+BOOTMSG         .AZ     / VIA DEVKIT with WOZMON (c) Steve Wozniak 1976/,#$0A,#$0D,/(I)nit Memory ?/,#$0A,#$0D
 MEMMSG          .AZ     / BYTES FREE/,#$0A,#$0D
 RTASMSG         .AZ     /TESTING MEMORY/,#$0A,#$0D
 ;-------------------------------------------------------------------------
