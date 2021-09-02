@@ -31,6 +31,7 @@ MEMSZL          .EQ     $2E
 MEMSZH          .EQ     $2F
 BCD             .EQ     $10
 NUMSTR          .EQ     $16
+ZPLCOUNT        .EQ     $23
 
 IN              .EQ     $0200,$027F     Input buffer
 
@@ -53,6 +54,14 @@ VIAPCR          .EQ     $800C           VIA Peripheral Control Register
 VIAIFR          .EQ     $800D           VIA Interrupt Flag Register
 VIAIER          .EQ     $800E           VIA Interrupt Enable Register
 
+RST				.EQ     %01000000	
+MOSI            .EQ     %10000000
+MISO            .EQ     %00000010
+CLK             .EQ     %00000001
+CS              .EQ     %00000100
+
+
+
 ; KBD b7..b0 are inputs, b6..b0 is ASCII input, b7 is constant high
 ;     Programmed to respond to low to high KBD strobe
 ; DSP b6..b0 are outputs, b7 is input
@@ -69,34 +78,113 @@ CR              .EQ     $8D             Carriage Return
 ESC             .EQ     $9B             ESC key
 PROMPT          .EQ     '>'             Prompt character
 
-;-------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
 ;  Begin DevKit ROM
-;-------------------------------------------------------------------------
+;----------------------------------------------------------------------------------------------------------
                 .OR     $E000
                 .TA     $0000
 
-START
-                LDA     #0
-                JMP     RESET
+START         ; Setup VIA and reset SPI SLAVE
+                LDA     #$D7                ; 0.001164 * 215
+                STA     ZPLCOUNT            ; approx .25/sec loop
+
+                LDA     #$FF 
+                STA     VIADDRA             ; portA all OUTPUT
+                LDA     #RST
+                STA     VIAORA              ; set RST pin HIGH
+                JSR     DELY                ; wait .25/sec
+                LDA     #$00                
+                STA     VIAORA              ; set all portA outputs low
+                JSR     DELY                ; wait .25/sec
+                LDA     #RST
+                STA     VIAORA              ; bring RTS pin HIGH
+                LDA     #$FF
+                EOR     #RST                
+                EOR     #MISO               
+                STA     VIADDRA             ; Set DDRA OIOOOOIO
+
+                
 
 
+;---------------------------------------   Output Header to PIA            
+                LDA     #STARTMSG &$FF
+                STA     STRL
+                LDA     #STARTMSG>>8
+                STA     STRH
+                JSR     STRECHO 
 
-;-------------------------------------------------------------------------
-;  Let's get started
-;
-;  Remark the RESET routine is only to be entered by asserting the RESET
-;  line of the system. This ensures that the data direction registers
-;  are selected.
+;----------------------------------------------------------------------------------------------------------                
+EVRLOOP         JMP     EVRLOOP
+;----------------------------------------------------------------------------------------------------------                
+
+DELY            PHP                    ; 3   Save State
+                PHA                    ; 3
+                TXA                    ; 2
+                PHA                    ; 3
+                TYA                    ; 2
+                PHA                    ; 3    16 total
+
+                LDY     ZPLCOUNT       ; 3
+.LP             LDX     #$FF           ; 2
+.LP1            DEX                    ; 2
+                BNE     .LP1           ; 2        4 x 256 = 1124
+                DEY                    ; 2
+                BNE     .LP            ; 2    1124 total
+
+                PLA                    ; 4    Retrive State
+                TAY                    ; 2
+                PLA                    ; 4
+                TAX                    ; 2
+                PLA                    ; 4
+                PLP                    ; 4    20 total
+                RTS                    ;
+                                       ;     1 iteration = 1164 cycles = 0.001164/sec
+
+
+;----------------------------------------------------------------------------------------------------------
+;   Messages
+STARTMSG        .AZ     #$01,/ -----------------------------     Menu     --------------------------------- /,#$0D,#$02,#$0D
+;----------------------------------------------------------------------------------------------------------
+;.proc spibyte
+;	        sta spi_writebuffer
+;.repeat 8			                    ; copy the next section 8 times
+;.scope
+;	        lda #%01111000		        ; base DATAB value with chip select for
+				                        ; MAX3100 and a zero bit in the output
+				                        ; line.
+;	        rol spi_writebuffer
+;	        bcc writing_zero_bit
+;	        ora #%00000100		        ; write a 1 bit to the output line.
+;           writing_zero_bit:
+		
+; 	        sta VIA_DATAB    	        ; write data back to the port
+;	        inc VIA_DATAB    	        ; set clock high
+
+;	        lda VIA_DATAB		        ; Read input bit
+;	        rol			                ; Shift input bit to carry flag
+;	        rol spi_readbuffer      	; Shift carry into readbuffer
+
+;	        dec VIA_DATAB    	        ; set clock low
+;.endscope
+;.endrepeat
+
+;	        lda spi_readbuffer	        ; result goes in A
+;	        rts
+;.endproc
 ;-------------------------------------------------------------------------
                 .NO     $FD00
                 .TA     $1D00
 ;-------------------------------------------------------------------------
 ;       Vector Table
 ;-------------------------------------------------------------------------
-
-VEC_START      
-                JMP     START
- 
+JMP_VEC
+START_VEC       JMP     START
+;-------------------------------------------------------------------------
+;  Let's get started
+;
+;  Remark the RESET routine is only to be entered by asserting the RESET
+;  line of the system. This ensures that the data direction registers
+;  are selected.
 ;------------------------------------------------------------------------                
 RESET           CLD                     Clear decimal arithmetic mode
                 CLI
@@ -166,8 +254,8 @@ NEXTITEM        LDA     IN,Y            Get character
                 BEQ     SETSTOR         Set STOR mode! $BA will become $7B
                 CMP     #"I"
                 BEQ     CLRRAM
-                CMP     #"T"
-                BEQ     VEC_START
+                CMP     #"S"
+                BEQ     START_VEC
                 CMP     #"R"
                 BEQ     RUN             Run the program! Forget the rest
                 STX     L               Clear input value (X=0)
@@ -212,23 +300,23 @@ NOTHEX          CPY     YSAV            Was at least 1 hex digit given?
                 BNE     NEXTITEM        No carry!
                 INC     STH             Add carry to 'store index' high
 TONEXTITEM      JMP     NEXTITEM        Get next command item.
-;--------------------------------------------------------------------------
-;       Clear Memory
-;--------------------------------------------------------------------------
 
-CLRRAM          LDA     #RTASMSG&$FF
+;--------------------------------------------------------------------------
+;       Clear Memory 
+;--------------------------------------------------------------------------
+CLRRAM          LDA     #RTASMSG &$FF
                 STA     STRL
                 LDA     #RTASMSG>>8
                 STA     STRH
                 JSR     STRECHO                
                 JSR     RAMTAS
                 JSR     BINBCD16
-                LDA     #NUMSTR&$FF
+                LDA     #NUMSTR &$FF
                 STA     STRL
                 LDA     #NUMSTR>>8
                 STA     STRH
                 JSR     STRECHO
-                LDA     #MEMMSG&$FF
+                LDA     #MEMMSG &$FF
                 STA     STRL
                 LDA     #MEMMSG>>8
                 STA     STRH
@@ -320,7 +408,9 @@ ECHO            BIT     DSP             DA bit (B7) cleared yet?
                 BMI     ECHO            No! Wait for display ready
                 STA     DSP             Output character. Sets DA
                 RTS
-
+;-------------------------------------------------------------------------
+;  RAM TEST [Commodore 64 method]
+;-------------------------------------------------------------------------
 RAMTAS          TYA
                 PHA
                 LDA     #0
@@ -364,7 +454,11 @@ SIZE            TYA
                 PLA
                 TAY
                 RTS
-                
+
+;---------------------------------------------------------------------------------
+;   String Echo
+;---------------------------------------------------------------------------------
+
 STRECHO         
                 TYA
                 PHA     ;-- Sanatize Y Register -------------------------------- 
@@ -379,13 +473,17 @@ STRECHO
 .JMPOUT         PLA
                 TAY
                 RTS
-            
+
+;-------------------------------------------------------------------------------
+;      BINBCD16 borrowed from Andrew Jacobs, 28-Feb-2004
+;-------------------------------------------------------------------------------
+
 BINBCD16
-                SED                 ; Switch to decimal mode        2
-                LDA     #0          ; Ensure the result is clear    2
-                STA     BCD+0       ;                               3
-                STA     BCD+1       ;                               3
-                STA     BCD+2       ;                               3       13
+                SED                  ; Switch to decimal mode        2
+                LDA     #0           ; Ensure the result is clear    2
+                STA     BCD+0        ;                               3
+                STA     BCD+1        ;                               3
+                STA     BCD+2        ;                               3       13
  
 CBIT1           ASL     MEMSZL       ; Shift out one bit             5
                 ROL     MEMSZL+1     ;                               5
@@ -412,6 +510,7 @@ CBIT1           ASL     MEMSZL       ; Shift out one bit             5
                 ROL     MEMSZL+1     ;                               5
                 ADC     BCD+0        ;                               3
                 STA     BCD+0        ;                               3       96
+
                 LDX     #7           ;                               2       2
 CBIT7           ASL     MEMSZL       ; Shift out one bit             5
                 ROL     MEMSZL+1     ;                               5
@@ -423,8 +522,8 @@ CBIT7           ASL     MEMSZL       ; Shift out one bit             5
                 STA     BCD+1        ;                               3
                 DEX                  ; And repeat for next bit       2
                 BNE     CBIT7        ;                               3       33*7-1=230
- 
-                LDX     #3          ;                                         2       2
+
+                LDX     #3           ;                               2       2
 CBIT13          ASL     MEMSZL       ; Shift out one bit             5
                 ROL     MEMSZL+1     ;                               5
                 LDA     BCD+0        ; And add into result           3
@@ -437,7 +536,7 @@ CBIT13          ASL     MEMSZL       ; Shift out one bit             5
                 ADC     BCD+2        ;                               3
                 STA     BCD+2        ;                               3
                 DEX                  ; And repeat for next bit       2
-                BNE CBIT13           ;                               3       42*3-1=125
+                BNE     CBIT13       ;                               3       42*3-1=125
                 CLD                  ; Back to binary                2       2; tot 470
                 AND     #$0F 
                 ORA     #$30
@@ -468,11 +567,13 @@ CBIT13          ASL     MEMSZL       ; Shift out one bit             5
                 STA     NUMSTR+0
                 RTS                  ; All Done.
 ;-----------------------------------------------------------------------------------                                             
-BOOTMSG         .AZ     / VIA DEVKIT with WOZMON (c) Steve Wozniak 1976/,#$0A,#$0D,/(I)nit Memory ?/,#$0A,#$0D
+; Message Strings
+;-----------------------------------------------------------------------------------
+BOOTMSG         .AZ     #$01,#$01,/ VIA DEVKIT V 1.0A with WOZMON (c) Steve Wozniak 1976 (C)dannyarnold.com 2021 /,#$0D,#$02,#$0A,/[I]nitialize Memory ?/,#$0A,#$0D
 MEMMSG          .AZ     / BYTES FREE/,#$0A,#$0D
 RTASMSG         .AZ     /TESTING MEMORY/,#$0A,#$0D
 ;-------------------------------------------------------------------------
-;  Vector area
+;  BOOT Vectors
 ;-------------------------------------------------------------------------
 ;               
                 .NO     $FFF8

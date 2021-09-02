@@ -28,475 +28,614 @@
 002F-                 31       MEMSZH          .EQ     $2F
 0010-                 32       BCD             .EQ     $10
 0016-                 33       NUMSTR          .EQ     $16
-0000-                 34
-0200-                 35       IN              .EQ     $0200,$027F     Input buffer
-0000-                 36
-D010-                 37       KBD             .EQ     $D010           PIA.A keyboard input
-D011-                 38       KBDCR           .EQ     $D011           PIA.A keyboard control register
-D012-                 39       DSP             .EQ     $D012           PIA.B display output register
-D013-                 40       DSPCR           .EQ     $D013           PIA.B display control register
-0000-                 41
-8001-                 42       VIAORA          .EQ     $8001           VIA Output Register A
-8001-                 43       VIAIRA          .EQ     $8001           VIA Input Register A
-8003-                 44       VIADDRA         .EQ     $8003           VIA Data Direction Register A
-0000-                 45
-8000-                 46       VIAORB          .EQ     $8000           VIA Output Register B
-8000-                 47       VIAIRB          .EQ     $8000           VIA Input Register B
-8002-                 48       VIADDRB         .EQ     $8002           VIA Data Direction Register B
-0000-                 49
-800A-                 50       VIASR           .EQ     $800A           VIA Shift Register
-800B-                 51       VIAACR          .EQ     $800B           VIA Aux Control Register
-800C-                 52       VIAPCR          .EQ     $800C           VIA Peripheral Control Register
-800D-                 53       VIAIFR          .EQ     $800D           VIA Interrupt Flag Register
-800E-                 54       VIAIER          .EQ     $800E           VIA Interrupt Enable Register
-0000-                 55
-0000-                 56       ; KBD b7..b0 are inputs, b6..b0 is ASCII input, b7 is constant high
-0000-                 57       ;     Programmed to respond to low to high KBD strobe
-0000-                 58       ; DSP b6..b0 are outputs, b7 is input
-0000-                 59       ;     CB2 goes low when data is written, returns high when CB1 goes high
-0000-                 60       ; Interrupts are enabled, though not used. KBD can be jumpered to IRQ,
-0000-                 61       ; whereas DSP can be jumpered to NMI.
+0023-                 34       ZPLP            .EQ     $23
+0000-                 35
+0200-                 36       IN              .EQ     $0200,$027F     Input buffer
+0000-                 37
+D010-                 38       KBD             .EQ     $D010           PIA.A keyboard input
+D011-                 39       KBDCR           .EQ     $D011           PIA.A keyboard control register
+D012-                 40       DSP             .EQ     $D012           PIA.B display output register
+D013-                 41       DSPCR           .EQ     $D013           PIA.B display control register
+0000-                 42
+8001-                 43       VIAORA          .EQ     $8001           VIA Output Register A
+8001-                 44       VIAIRA          .EQ     $8001           VIA Input Register A
+8003-                 45       VIADDRA         .EQ     $8003           VIA Data Direction Register A
+0000-                 46
+8000-                 47       VIAORB          .EQ     $8000           VIA Output Register B
+8000-                 48       VIAIRB          .EQ     $8000           VIA Input Register B
+8002-                 49       VIADDRB         .EQ     $8002           VIA Data Direction Register B
+0000-                 50
+800A-                 51       VIASR           .EQ     $800A           VIA Shift Register
+800B-                 52       VIAACR          .EQ     $800B           VIA Aux Control Register
+800C-                 53       VIAPCR          .EQ     $800C           VIA Peripheral Control Register
+800D-                 54       VIAIFR          .EQ     $800D           VIA Interrupt Flag Register
+800E-                 55       VIAIER          .EQ     $800E           VIA Interrupt Enable Register
+0000-                 56
+0040-                 57       RST                             .EQ     %01000000
+0080-                 58       MOSI            .EQ     %10000000
+0002-                 59       MISO            .EQ     %00000010
+0001-                 60       CLK             .EQ     %00000001
+0004-                 61       CS              .EQ     %00000100
 0000-                 62
-0000-                 63       ;-------------------------------------------------------------------------
-0000-                 64       ;  Constants
-0000-                 65       ;-------------------------------------------------------------------------
-0000-                 66
-00DF-                 67       BS              .EQ     $DF             Backspace key, arrow left key
-008D-                 68       CR              .EQ     $8D             Carriage Return
-009B-                 69       ESC             .EQ     $9B             ESC key
-003E-                 70       PROMPT          .EQ     '>'             Prompt character
+0000-                 63
+0000-                 64
+0000-                 65       ; KBD b7..b0 are inputs, b6..b0 is ASCII input, b7 is constant high
+0000-                 66       ;     Programmed to respond to low to high KBD strobe
+0000-                 67       ; DSP b6..b0 are outputs, b7 is input
+0000-                 68       ;     CB2 goes low when data is written, returns high when CB1 goes high
+0000-                 69       ; Interrupts are enabled, though not used. KBD can be jumpered to IRQ,
+0000-                 70       ; whereas DSP can be jumpered to NMI.
 0000-                 71
 0000-                 72       ;-------------------------------------------------------------------------
-0000-                 73       ;  Begin DevKit ROM
+0000-                 73       ;  Constants
 0000-                 74       ;-------------------------------------------------------------------------
-E000-                 75                       .OR     $E000
-E000-                 76                       .TA     $0000
-E000-                 77
-E000-                 78       START
-E000-A9 00            79 (  2)                 LDA     #0
-E002-4C 03 FD         80 (  3)                 JMP     RESET
-E005-                 81
-E005-                 82
-E005-                 83
-E005-                 84       ;-------------------------------------------------------------------------
-E005-                 85       ;  Let's get started
-E005-                 86       ;
-E005-                 87       ;  Remark the RESET routine is only to be entered by asserting the RESET
-E005-                 88       ;  line of the system. This ensures that the data direction registers
-E005-                 89       ;  are selected.
-E005-                 90       ;-------------------------------------------------------------------------
-FD00                 91                       .NO     $FD00
-FD00-                 92                       .TA     $1D00
-FD00-                 93       ;-------------------------------------------------------------------------
-FD00-                 94       ;       Vector Table
-FD00-                 95       ;-------------------------------------------------------------------------
-FD00-                 96
-FD00-                 97       VEC_START
-FD00-4C 00 E0         98 (  3)                 JMP     START
-FD03-                 99
-FD03-                100       ;------------------------------------------------------------------------
-FD03-D8              101 (  2) RESET           CLD                     Clear decimal arithmetic mode
-FD04-58              102 (  2)                 CLI
-FD05-A0 7F           103 (  2)                 LDY     #%0111.1111     Mask for DSP data direction reg
-FD07-8C 12 D0        104 (  4)                 STY     DSP              (DDR mode is assumed after reset)
-FD0A-A9 A7           105 (  2)                 LDA     #%1010.0111     KBD and DSP control register mask
-FD0C-8D 11 D0        106 (  4)                 STA     KBDCR           Enable interrupts, set CA1, CB1 for
-FD0F-8D 13 D0        107 (  4)                 STA     DSPCR            positive edge sense/output mode.
-FD12-                108
-FD12-                109       ; Program falls through to the GETLINE routine to save some program bytes
-FD12-                110       ; Please note that Y still holds $7F, which will cause an automatic Escape
-FD12-                111
-FD12-A9 33           112 (  2)                 LDA     #BOOTMSG&$FF
-FD14-85 2C           113 (  2)                 STA     STRL
-FD16-A9 FF           114 (  2)                 LDA     #BOOTMSG>>8
-FD18-85 2D           115 (  2)                 STA     STRH
-FD1A-20 89 FE        116 (  6)                 JSR     STRECHO
-FD1D-A9 00           117 (  2)                 LDA     #0
-FD1F-                118       ;-------------------------------------------------------------------------
-FD1F-                119       ; The GETLINE process
-FD1F-                120       ;-------------------------------------------------------------------------
-FD1F-                121
-FD1F-C9 DF           122 (  2) NOTCR           CMP     #BS             Backspace key?
-FD21-F0 13           123 (2**)                 BEQ     BACKSPACE       Yes
-FD23-C9 9B           124 (  2)                 CMP     #ESC            ESC?
-FD25-F0 03           125 (2**)                 BEQ     ESCAPE          Yes
-FD27-C8              126 (  2)                 INY                     Advance text index
-FD28-10 0F           127 (2**)                 BPL     NEXTCHAR        Auto ESC if line longer than 127
-FD2A-                128
-FD2A-A9 3E           129 (  2) ESCAPE          LDA     #PROMPT         Print prompt character
-FD2C-20 33 FE        130 (  6)                 JSR     ECHO            Output it.
-FD2F-                131
-FD2F-A9 8D           132 (  2) GETLINE         LDA     #CR             Send CR
-FD31-20 33 FE        133 (  6)                 JSR     ECHO
-FD34-                134
-FD34-A0 01           135 (  2)                 LDY     #0+1            Start a new input line
-FD36-88              136 (  2) BACKSPACE       DEY                     Backup text index
-FD37-30 F6           137 (2**)                 BMI     GETLINE         Oops, line's empty, reinitialize
-FD39-                138
-FD39-AD 11 D0        139 (  4) NEXTCHAR        LDA     KBDCR           Wait for key press
-FD3C-10 FB           140 (2**)                 BPL     NEXTCHAR        No key yet!
-FD3E-AD 10 D0        141 (  4)                 LDA     KBD             Load character. B7 should be '1'
-FD41-99 00 02        142 (  5)                 STA     IN,Y            Add to text buffer
-FD44-20 33 FE        143 (  6)                 JSR     ECHO            Display character
-FD47-C9 8D           144 (  2)                 CMP     #CR
-FD49-D0 D4           145 (2**)                 BNE     NOTCR           It's not CR!
-FD4B-                146
-FD4B-                147       ; Line received, now let's parse it
-FD4B-                148
-FD4B-A0 FF           149 (  2)                 LDY     #-1             Reset text index
-FD4D-A9 00           150 (  2)                 LDA     #0              Default mode is XAM
-FD4F-AA              151 (  2)                 TAX                     X=0
-FD50-                152
-FD50-0A              153 (  2) SETSTOR         ASL                     Leaves $7B if setting STOR mode
-FD51-                154
-FD51-85 2B           155 (  2) SETMODE         STA     MODE            Set mode flags
-FD53-                156
-FD53-C8              157 (  2) BLSKIP          INY                     Advance text index
-FD54-                158
-FD54-B9 00 02        159 ( 4*) NEXTITEM        LDA     IN,Y            Get character
-FD57-C9 8D           160 (  2)                 CMP     #CR
-FD59-F0 D4           161 (2**)                 BEQ     GETLINE         We're done if it's CR!
-FD5B-C9 AE           162 (  2)                 CMP     #"."
-FD5D-90 F4           163 (2**)                 BCC     BLSKIP          Ignore everything below "."!
-FD5F-F0 F0           164 (2**)                 BEQ     SETMODE         Set BLOCK XAM mode ("." = $AE)
-FD61-C9 BA           165 (  2)                 CMP     #":"
-FD63-F0 EB           166 (2**)                 BEQ     SETSTOR         Set STOR mode! $BA will become $7B
-FD65-C9 C9           167 (  2)                 CMP     #"I"
-FD67-F0 43           168 (2**)                 BEQ     CLRRAM
-FD69-C9 D4           169 (  2)                 CMP     #"T"
-FD6B-F0 93           170 (2**)                 BEQ     VEC_START
-FD6D-C9 D2           171 (  2)                 CMP     #"R"
-FD6F-F0 67           172 (2**)                 BEQ     RUN             Run the program! Forget the rest
-FD71-86 28           173 (  3)                 STX     L               Clear input value (X=0)
-FD73-86 29           174 (  3)                 STX     H
-FD75-84 2A           175 (  3)                 STY     YSAV            Save Y for comparison
-FD77-                176
-FD77-                177       ; Here we're trying to parse a new hex value
-FD77-                178
-FD77-B9 00 02        179 ( 4*) NEXTHEX         LDA     IN,Y            Get character for hex test
-FD7A-49 B0           180 (  2)                 EOR     #$B0            Map digits to 0-9
-FD7C-C9 0A           181 (  2)                 CMP     #9+1            Is it a decimal digit?
-FD7E-90 06           182 (2**)                 BCC     DIG             Yes!
-FD80-69 88           183 (  2)                 ADC     #$88            Map letter "A"-"F" to $FA-FF
-FD82-C9 FA           184 (  2)                 CMP     #$FA            Hex letter?
-FD84-90 11           185 (2**)                 BCC     NOTHEX          No! Character not hex
-FD86-                186
-FD86-0A              187 (  2) DIG             ASL
-FD87-0A              188 (  2)                 ASL                     Hex digit to MSD of A
-FD88-0A              189 (  2)                 ASL
-FD89-0A              190 (  2)                 ASL
-FD8A-                191
-FD8A-A2 04           192 (  2)                 LDX     #4              Shift count
-FD8C-0A              193 (  2) HEXSHIFT        ASL                     Hex digit left, MSB to carry
-FD8D-26 28           194 (  5)                 ROL     L               Rotate into LSD
-FD8F-26 29           195 (  5)                 ROL     H               Rotate into MSD's
-FD91-CA              196 (  2)                 DEX                     Done 4 shifts?
-FD92-D0 F8           197 (2**)                 BNE     HEXSHIFT        No, loop
-FD94-C8              198 (  2)                 INY                     Advance text index
-FD95-D0 E0           199 (2**)                 BNE     NEXTHEX         Always taken
-FD97-                200
-FD97-C4 2A           201 (  3) NOTHEX          CPY     YSAV            Was at least 1 hex digit given?
-FD99-F0 8F           202 (2**)                 BEQ     ESCAPE          No! Ignore all, start from scratch
-FD9B-                203
-FD9B-24 2B           204 (  3)                 BIT     MODE            Test MODE byte
-FD9D-50 3C           205 (2**)                 BVC     NOTSTOR         B6=0 is STOR, 1 is XAM or BLOCK XAM
-FD9F-                206
-FD9F-                207       ; STOR mode, save LSD of new hex byte
-FD9F-                208
-FD9F-A5 28           209 (  3)                 LDA     L               LSD's of hex data
-FDA1-81 26           210 (  6)                 STA     (STL,X)         Store current 'store index'(X=0)
-FDA3-E6 26           211 (  5)                 INC     STL             Increment store index.
-FDA5-D0 AD           212 (2**)                 BNE     NEXTITEM        No carry!
-FDA7-E6 27           213 (  5)                 INC     STH             Add carry to 'store index' high
-FDA9-4C 54 FD        214 (  3) TONEXTITEM      JMP     NEXTITEM        Get next command item.
-FDAC-                215       ;--------------------------------------------------------------------------
-FDAC-                216       ;       Clear Memory
-FDAC-                217       ;--------------------------------------------------------------------------
-FDAC-                218
-FDAC-A9 83           219 (  2) CLRRAM          LDA     #RTASMSG&$FF
-FDAE-85 2C           220 (  2)                 STA     STRL
-FDB0-A9 FF           221 (  2)                 LDA     #RTASMSG>>8
-FDB2-85 2D           222 (  2)                 STA     STRH
-FDB4-20 89 FE        223 (  6)                 JSR     STRECHO
-FDB7-20 3C FE        224 (  6)                 JSR     RAMTAS
-FDBA-20 9A FE        225 (  6)                 JSR     BINBCD16
-FDBD-A9 16           226 (  2)                 LDA     #NUMSTR&$FF
-FDBF-85 2C           227 (  2)                 STA     STRL
-FDC1-A9 00           228 (  2)                 LDA     #NUMSTR>>8
-FDC3-85 2D           229 (  2)                 STA     STRH
-FDC5-20 89 FE        230 (  6)                 JSR     STRECHO
-FDC8-A9 75           231 (  2)                 LDA     #MEMMSG&$FF
-FDCA-85 2C           232 (  2)                 STA     STRL
-FDCC-A9 FF           233 (  2)                 LDA     #MEMMSG>>8
-FDCE-85 2D           234 (  2)                 STA     STRH
-FDD0-20 89 FE        235 (  6)                 JSR     STRECHO
-FDD3-A0 7F           236 (  2)                 LDY     #$7F
-FDD5-4C 1F FD        237 (  3)                 JMP     NOTCR
-FDD8-                238
-FDD8-                239       ;-------------------------------------------------------------------------
-FDD8-                240       ;  RUN user's program from last opened location
-FDD8-                241       ;-------------------------------------------------------------------------
-FDD8-6C 24 00        242 (  5) RUN             JMP     (XAML)          Run user's program
-FDDB-                243       ;-------------------------------------------------------------------------
-FDDB-                244       ;  We're not in Store mode
-FDDB-                245       ;-------------------------------------------------------------------------
-FDDB-                246
-FDDB-30 2B           247 (2**) NOTSTOR         BMI     XAMNEXT         B7 = 0 for XAM, 1 for BLOCK XAM
-FDDD-                248
-FDDD-                249       ; We're in XAM mode now
-FDDD-                250
-FDDD-A2 02           251 (  2)                 LDX     #2              Copy 2 bytes
-FDDF-B5 27           252 (  4) SETADR          LDA     L-1,X           Copy hex data to
-FDE1-95 25           253 (  4)                 STA     STL-1,X          'store index'
-FDE3-95 23           254 (  4)                 STA     XAML-1,X         and to 'XAM index'
-FDE5-CA              255 (  2)                 DEX                     Next of 2 bytes
-FDE6-D0 F7           256 (2**)                 BNE     SETADR          Loop unless X = 0
-FDE8-                257
-FDE8-                258       ; Print address and data from this address, fall through next BNE.
-FDE8-                259
-FDE8-D0 14           260 (2**) NXTPRNT         BNE     PRDATA          NE means no address to print
-FDEA-A9 8D           261 (  2)                 LDA     #CR             Print CR first
-FDEC-20 33 FE        262 (  6)                 JSR     ECHO
-FDEF-A5 25           263 (  3)                 LDA     XAMH            Output high-order byte of address
-FDF1-20 20 FE        264 (  6)                 JSR     PRBYTE
-FDF4-A5 24           265 (  3)                 LDA     XAML            Output low-order byte of address
-FDF6-20 20 FE        266 (  6)                 JSR     PRBYTE
-FDF9-A9 BA           267 (  2)                 LDA     #":"            Print colon
-FDFB-20 33 FE        268 (  6)                 JSR     ECHO
-FDFE-                269
-FDFE-A9 A0           270 (  2) PRDATA          LDA     #" "            Print space
-FE00-20 33 FE        271 (  6)                 JSR     ECHO
-FE03-A1 24           272 (  6)                 LDA     (XAML,X)        Get data from address (X=0)
-FE05-20 20 FE        273 (  6)                 JSR     PRBYTE          Output it in hex format
-FE08-86 2B           274 (  3) XAMNEXT         STX     MODE            0 -> MODE (XAM mode).
-FE0A-A5 24           275 (  3)                 LDA     XAML            See if there's more to print
-FE0C-C5 28           276 (  3)                 CMP     L
-FE0E-A5 25           277 (  3)                 LDA     XAMH
-FE10-E5 29           278 (  3)                 SBC     H
-FE12-B0 95           279 (2**)                 BCS     TONEXTITEM      Not less! No more data to output
-FE14-                280
-FE14-E6 24           281 (  5)                 INC     XAML            Increment 'examine index'
-FE16-D0 02           282 (2**)                 BNE     MOD8CHK         No carry!
-FE18-E6 25           283 (  5)                 INC     XAMH
-FE1A-                284
-FE1A-A5 24           285 (  3) MOD8CHK         LDA     XAML            If address MOD 8 = 0 start new line
-FE1C-29 07           286 (  2)                 AND     #%0000.0111
-FE1E-10 C8           287 (2**)                 BPL     NXTPRNT         Always taken.
-FE20-                288
-FE20-                289       ;-------------------------------------------------------------------------
-FE20-                290       ;  Subroutine to print a byte in A in hex form (destructive)
-FE20-                291       ;-------------------------------------------------------------------------
-FE20-                292
-FE20-48              293 (  3) PRBYTE          PHA                     Save A for LSD
-FE21-4A              294 (  2)                 LSR
-FE22-4A              295 (  2)                 LSR
-FE23-4A              296 (  2)                 LSR                     MSD to LSD position
-FE24-4A              297 (  2)                 LSR
-FE25-20 29 FE        298 (  6)                 JSR     PRHEX           Output hex digit
-FE28-68              299 (  4)                 PLA                     Restore A
-FE29-                300
-FE29-                301       ; Fall through to print hex routine
-FE29-                302
-FE29-                303       ;-------------------------------------------------------------------------
-FE29-                304       ;  Subroutine to print a hexadecimal digit
-FE29-                305       ;-------------------------------------------------------------------------
-FE29-                306
-FE29-29 0F           307 (  2) PRHEX           AND     #%0000.1111     Mask LSD for hex print
-FE2B-09 B0           308 (  2)                 ORA     #"0"            Add "0"
-FE2D-C9 BA           309 (  2)                 CMP     #"9"+1          Is it a decimal digit?
-FE2F-90 02           310 (2**)                 BCC     ECHO            Yes! output it
-FE31-69 06           311 (  2)                 ADC     #6              Add offset for letter A-F
-FE33-                312
-FE33-                313       ; Fall through to print routine
-FE33-                314
-FE33-                315       ;-------------------------------------------------------------------------
-FE33-                316       ;  Subroutine to print a character to the terminal
-FE33-                317       ;-------------------------------------------------------------------------
-FE33-                318
-FE33-2C 12 D0        319 (  4) ECHO            BIT     DSP             DA bit (B7) cleared yet?
-FE36-30 FB           320 (2**)                 BMI     ECHO            No! Wait for display ready
-FE38-8D 12 D0        321 (  4)                 STA     DSP             Output character. Sets DA
-FE3B-60              322 (  6)                 RTS
-FE3C-                323
-FE3C-98              324 (  2) RAMTAS          TYA
-FE3D-48              325 (  3)                 PHA
-FE3E-A9 00           326 (  2)                 LDA     #0
-FE40-98              327 (  2)                 TYA
-FE41-99 02 00        328 (  5) RAMTZ0          STA     $0002,Y
-FE44-99 00 02        329 (  5)                 STA     $0200,Y
-FE47-99 00 03        330 (  5)                 STA     $0300,Y
-FE4A-C8              331 (  2)                 INY
-FE4B-D0 F4           332 (2**)                 BNE     RAMTZ0
-FE4D-98              333 (  2) RAMTBT          TYA
-FE4E-A9 03           334 (  2)                 LDA     #3
-FE50-85 C2           335 (  2)                 STA     TMP0+1
-FE52-A9 2E           336 (  2) RAMTZ1          LDA     #'.'
-FE54-20 33 FE        337 (  6)                 JSR     ECHO
-FE57-E6 C2           338 (  5)                 INC     TMP0+1
-FE59-B1 C1           339 ( 5*) RAMTZ2          LDA     (TMP0),Y
-FE5B-AA              340 (  2)                 TAX
-FE5C-A9 55           341 (  2)                 LDA     #$55
-FE5E-91 C1           342 (  6)                 STA     (TMP0),Y
-FE60-D1 C1           343 ( 5*)                 CMP     (TMP0),Y
-FE62-D0 0F           344 (2**)                 BNE     SIZE
-FE64-2A              345 (  2)                 ROL     A
-FE65-91 C1           346 (  6)                 STA     (TMP0),Y
-FE67-D1 C1           347 ( 5*)                 CMP     (TMP0),Y
-FE69-D0 08           348 (2**)                 BNE     SIZE
-FE6B-AA              349 (  2)                 TAX
-FE6C-91 C1           350 (  6)                 STA     (TMP0),Y
-FE6E-C8              351 (  2)                 INY
-FE6F-D0 E8           352 (2**)                 BNE     RAMTZ2
-FE71-F0 DF           353 (2**)                 BEQ     RAMTZ1
-FE73-98              354 (  2) SIZE            TYA
-FE74-AA              355 (  2)                 TAX
-FE75-A4 C2           356 (  3)                 LDY     TMP0+1
-FE77-18              357 (  2)                 CLC
-FE78-86 2E           358 (  3)                 STX     MEMSZL
-FE7A-84 2F           359 (  3)                 STY     MEMSZH
-FE7C-A9 0A           360 (  2)                 LDA     #$0A
-FE7E-20 33 FE        361 (  6)                 JSR     ECHO
-FE81-A9 0D           362 (  2)                 LDA     #$0D
-FE83-20 33 FE        363 (  6)                 JSR     ECHO
-FE86-68              364 (  4)                 PLA
-FE87-A8              365 (  2)                 TAY
-FE88-60              366 (  6)                 RTS
-FE89-                367
-FE89-                368       STRECHO
-FE89-98              369 (  2)                 TYA
-FE8A-48              370 (  3)                 PHA     ;-- Sanatize Y Register --------------------------------
-FE8B-                371
-FE8B-A0 00           372 (  2)                 LDY     #$0
-FE8D-B1 2C           373 ( 5*) .LOOP           LDA     (STRL),Y
-FE8F-F0 06           374 (2**)                 BEQ     .JMPOUT
-FE91-20 33 FE        375 (  6)                 JSR     ECHO
-FE94-C8              376 (  2)                 INY
-FE95-D0 F6           377 (2**)                 BNE     .LOOP
-FE97-                378
-FE97-68              379 (  4) .JMPOUT         PLA
-FE98-A8              380 (  2)                 TAY
-FE99-60              381 (  6)                 RTS
-FE9A-                382
-FE9A-                383       BINBCD16
-FE9A-F8              384 (  2)                 SED                 ; Switch to decimal mode        2
-FE9B-A9 00           385 (  2)                 LDA     #0          ; Ensure the result is clear    2
-FE9D-85 10           386 (  2)                 STA     BCD+0       ;                               3
-FE9F-85 11           387 (  2)                 STA     BCD+1       ;                               3
-FEA1-85 12           388 (  2)                 STA     BCD+2       ;                               3       13
-FEA3-                389
-FEA3-06 2E           390 (  5) CBIT1           ASL     MEMSZL       ; Shift out one bit             5
-FEA5-26 2F           391 (  5)                 ROL     MEMSZL+1     ;                               5
-FEA7-                392       ;               LDA     bcd+0        ;
-FEA7-65 10           393 (  3)                 ADC     BCD+0        ; And add into result           3
-FEA9-85 10           394 (  2)                 STA     BCD+0        ;                               3
-FEAB-06 2E           395 (  5)                 ASL     MEMSZL       ;                               5
-FEAD-26 2F           396 (  5)                 ROL     MEMSZL+1     ;                               5
-FEAF-65 10           397 (  3)                 ADC     BCD+0        ;                               3
-FEB1-85 10           398 (  2)                 STA     BCD+0        ;                               3
-FEB3-06 2E           399 (  5)                 ASL     MEMSZL       ;                               5
-FEB5-26 2F           400 (  5)                 ROL     MEMSZL+1     ;                               5
-FEB7-65 10           401 (  3)                 ADC     BCD+0        ;                               3
-FEB9-85 10           402 (  2)                 STA     BCD+0        ;                               3
-FEBB-06 2E           403 (  5)                 ASL     MEMSZL       ;                               5
-FEBD-26 2F           404 (  5)                 ROL     MEMSZL+1     ;                               5
-FEBF-65 10           405 (  3)                 ADC     BCD+0        ;                               3
-FEC1-85 10           406 (  2)                 STA     BCD+0        ;                               3
-FEC3-06 2E           407 (  5)                 ASL     MEMSZL       ;                               5
-FEC5-26 2F           408 (  5)                 ROL     MEMSZL+1     ;                               5
-FEC7-65 10           409 (  3)                 ADC     BCD+0        ;                               3
-FEC9-85 10           410 (  2)                 STA     BCD+0        ;                               3
-FECB-06 2E           411 (  5)                 ASL     MEMSZL       ;                               5
-FECD-26 2F           412 (  5)                 ROL     MEMSZL+1     ;                               5
-FECF-65 10           413 (  3)                 ADC     BCD+0        ;                               3
-FED1-85 10           414 (  2)                 STA     BCD+0        ;                               3       96
-FED3-A2 07           415 (  2)                 LDX     #7           ;                               2       2
-FED5-06 2E           416 (  5) CBIT7           ASL     MEMSZL       ; Shift out one bit             5
-FED7-26 2F           417 (  5)                 ROL     MEMSZL+1     ;                               5
-FED9-A5 10           418 (  3)                 LDA     BCD+0        ; And add into result           3
-FEDB-65 10           419 (  3)                 ADC     BCD+0        ;                               3
-FEDD-85 10           420 (  2)                 STA     BCD+0        ;                               3
-FEDF-A5 11           421 (  3)                 LDA     BCD+1        ; propagating any carry         3
-FEE1-65 11           422 (  3)                 ADC     BCD+1        ;                               3
-FEE3-85 11           423 (  2)                 STA     BCD+1        ;                               3
-FEE5-CA              424 (  2)                 DEX                  ; And repeat for next bit       2
-FEE6-D0 ED           425 (2**)                 BNE     CBIT7        ;                               3       33*7-1=230
-FEE8-                426
-FEE8-A2 03           427 (  2)                 LDX     #3          ;                                         2       2
-FEEA-06 2E           428 (  5) CBIT13          ASL     MEMSZL       ; Shift out one bit             5
-FEEC-26 2F           429 (  5)                 ROL     MEMSZL+1     ;                               5
-FEEE-A5 10           430 (  3)                 LDA     BCD+0        ; And add into result           3
-FEF0-65 10           431 (  3)                 ADC     BCD+0        ;                               3
-FEF2-85 10           432 (  2)                 STA     BCD+0        ;                               3
-FEF4-A5 11           433 (  3)                 LDA     BCD+1        ; propagating any carry         3
-FEF6-65 11           434 (  3)                 ADC     BCD+1        ;                               3
-FEF8-85 11           435 (  2)                 STA     BCD+1        ;                               3
-FEFA-A5 12           436 (  3)                 LDA     BCD+2        ; ... thru whole result         3
-FEFC-65 12           437 (  3)                 ADC     BCD+2        ;                               3
-FEFE-85 12           438 (  2)                 STA     BCD+2        ;                               3
-FF00-CA              439 (  2)                 DEX                  ; And repeat for next bit       2
-FF01-D0 E7           440 (2**)                 BNE CBIT13           ;                               3       42*3-1=125
-FF03-D8              441 (  2)                 CLD                  ; Back to binary                2       2; tot 470
-FF04-29 0F           442 (  2)                 AND     #$0F
-FF06-09 30           443 (  2)                 ORA     #$30
-FF08-85 17           444 (  2)                 STA     NUMSTR+1
-FF0A-A5 11           445 (  3)                 LDA     BCD+1
-FF0C-29 0F           446 (  2)                 AND     #$0F
-FF0E-09 30           447 (  2)                 ORA     #$30
-FF10-85 19           448 (  2)                 STA     NUMSTR+3
-FF12-A5 11           449 (  3)                 LDA     BCD+1
-FF14-4A              450 (  2)                 LSR
-FF15-4A              451 (  2)                 LSR
-FF16-4A              452 (  2)                 LSR
-FF17-4A              453 (  2)                 LSR
-FF18-09 30           454 (  2)                 ORA     #$30
-FF1A-85 18           455 (  2)                 STA     NUMSTR+2
-FF1C-A5 10           456 (  3)                 LDA     BCD+0
-FF1E-29 0F           457 (  2)                 AND     #$0F
-FF20-09 30           458 (  2)                 ORA     #$30
-FF22-85 1B           459 (  2)                 STA     NUMSTR+5
-FF24-A5 10           460 (  3)                 LDA     BCD+0
-FF26-4A              461 (  2)                 LSR
-FF27-4A              462 (  2)                 LSR
-FF28-4A              463 (  2)                 LSR
-FF29-4A              464 (  2)                 LSR
-FF2A-09 30           465 (  2)                 ORA     #$30
-FF2C-85 1A           466 (  2)                 STA     NUMSTR+4
-FF2E-A9 14           467 (  2)                 LDA     #20
-FF30-85 16           468 (  2)                 STA     NUMSTR+0
-FF32-60              469 (  6)                 RTS                  ; All Done.
-FF33-                470       ;-----------------------------------------------------------------------------------
-FF33-20 56 49 41 
-     20 44 45 56 
-     4B 49 54 20 
-     77 69 74 68 
-     20 57 4F 5A 
-     4D 4F 4E 20 
-     28 63 29 20 
-     53 74 65 76 
-     65 20 57 6F 
-     7A 6E 69 61 
-     6B 20 31 39 
-     37 36 0A 0D 
-     28 49 29 6E 
-     69 74 20 4D 
-     65 6D 6F 72 
-     79 20 3F 0A 
-     0D 00           471       BOOTMSG         .AZ     / VIA DEVKIT with WOZMON (c) Steve Wozniak 1976/,#$0A,#$0D,/(I)nit Memory ?/,#$0A,#$0D
-FF75-20 42 59 54 
+0000-                 75
+00DF-                 76       BS              .EQ     $DF             Backspace key, arrow left key
+008D-                 77       CR              .EQ     $8D             Carriage Return
+009B-                 78       ESC             .EQ     $9B             ESC key
+003E-                 79       PROMPT          .EQ     '>'             Prompt character
+0000-                 80
+0000-                 81       ;----------------------------------------------------------------------------------------------------------
+0000-                 82       ;  Begin DevKit ROM
+0000-                 83       ;----------------------------------------------------------------------------------------------------------
+E000-                 84                       .OR     $E000
+E000-                 85                       .TA     $0000
+E000-                 86
+E000-                 87       START         ; Setup VIA and reset SPI SLAVE
+E000-A9 D8            88 (  2)                 LDA     #$D8
+E002-85 23            89 (  2)                 STA     ZPLP                ; .25/sec loop
+E004-A9 FF            90 (  2)                 LDA     #$FF
+E006-                 91
+E006-8D 03 80         92 (  4)                 STA     VIADDRA
+E009-A9 40            93 (  2)                 LDA     #RST
+E00B-8D 01 80         94 (  4)                 STA     VIAORA
+E00E-20 4B E0         95 (  6)                 JSR     DELY
+E011-A9 00            96 (  2)                 LDA     #$00
+E013-8D 01 80         97 (  4)                 STA     VIAORA
+E016-20 4B E0         98 (  6)                 JSR     DELY
+E019-A9 40            99 (  2)                 LDA     #RST
+E01B-8D 01 80        100 (  4)                 STA     VIAORA
+E01E-A9 FF           101 (  2)                 LDA     #$FF
+E020-49 40           102 (  2)                 EOR     #RST
+E022-49 02           103 (  2)                 EOR     #MISO
+E024-8D 03 80        104 (  4)                 STA     VIADDRA
+E027-                105
+E027-A9 01           106 (  2)                 LDA     #CLK
+E029-8D 01 80        107 (  4) .OSEC           STA     VIAORA
+E02C-20 4B E0        108 (  6)                 JSR     DELY        ;
+E02F-20 4B E0        109 (  6)                 JSR     DELY        ;
+E032-20 4B E0        110 (  6)                 JSR     DELY        ;
+E035-20 4B E0        111 (  6)                 JSR     DELY        ; 1/sec delay
+E038-49 01           112 (  2)                 EOR     #CLK
+E03A-4C 29 E0        113 (  3)                 JMP     .OSEC
+E03D-                114
+E03D-                115
+E03D-                116
+E03D-                117       ;---------------------------------------   Print Header
+E03D-A9 62           118 (  2)                 LDA     #STARTMSG &$FF
+E03F-85 2C           119 (  2)                 STA     STRL
+E041-A9 E0           120 (  2)                 LDA     #STARTMSG>>8
+E043-85 2D           121 (  2)                 STA     STRH
+E045-20 89 FE        122 (  6)                 JSR     STRECHO
+E048-                123
+E048-                124       ;----------------------------------------------------------------------------------------------------------
+E048-4C 48 E0        125 (  3) EVRLOOP         JMP     EVRLOOP
+E04B-                126       ;----------------------------------------------------------------------------------------------------------
+E04B-                127
+E04B-08              128 (  3) DELY            PHP                    ; 3   Save State
+E04C-48              129 (  3)                 PHA                    ; 3
+E04D-8A              130 (  2)                 TXA                    ; 2
+E04E-48              131 (  3)                 PHA                    ; 3
+E04F-98              132 (  2)                 TYA                    ; 2
+E050-48              133 (  3)                 PHA                    ; 3    16 total
+E051-                134
+E051-A4 23           135 (  3)                 LDY     ZPLP           ; 3
+E053-A2 FF           136 (  2) .LP             LDX     #$FF           ; 2
+E055-CA              137 (  2) .LP1            DEX                    ; 2
+E056-D0 FD           138 (2**)                 BNE     .LP1           ; 2        4 x 255 = 1120
+E058-88              139 (  2)                 DEY                    ; 2
+E059-D0 F8           140 (2**)                 BNE     .LP            ; 2    1124 total
+E05B-                141
+E05B-68              142 (  4)                 PLA                    ; 4    Retrive State
+E05C-A8              143 (  2)                 TAY                    ; 2
+E05D-68              144 (  4)                 PLA                    ; 4
+E05E-AA              145 (  2)                 TAX                    ; 2
+E05F-68              146 (  4)                 PLA                    ; 4
+E060-28              147 (  4)                 PLP                    ; 4    20 total
+E061-60              148 (  6)                 RTS                    ;
+E062-                149                                              ;     1 iteration = 1160
+E062-                150
+E062-                151
+E062-                152       ;----------------------------------------------------------------------------------------------------------
+E062-                153       ;   Messages
+E062-01 20 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 20 
+     20 20 20 20 
+     4D 65 6E 75 
+     20 20 20 20 
+     20 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 2D 2D 
+     2D 2D 20 0D 
+     02 0D 00        154       STARTMSG        .AZ     #$01,/ -----------------------------     Menu     --------------------------------- /,#$0D,#$02,#$0D
+E0B5-                155       ;----------------------------------------------------------------------------------------------------------
+E0B5-                156       ;.proc spibyte
+E0B5-                157       ;               sta spi_writebuffer
+E0B5-                158       ;.repeat 8                                          ; copy the next section 8 times
+E0B5-                159       ;.scope
+E0B5-                160       ;               lda #%01111000                  ; base DATAB value with chip select for
+E0B5-                161                                                               ; MAX3100 and a zero bit in the output
+E0B5-                162                                                               ; line.
+E0B5-                163       ;               rol spi_writebuffer
+E0B5-                164       ;               bcc writing_zero_bit
+E0B5-                165       ;               ora #%00000100                  ; write a 1 bit to the output line.
+E0B5-                166       ;           writing_zero_bit:
+E0B5-                167
+E0B5-                168       ;               sta VIA_DATAB                   ; write data back to the port
+E0B5-                169       ;               inc VIA_DATAB                   ; set clock high
+E0B5-                170
+E0B5-                171       ;               lda VIA_DATAB                   ; Read input bit
+E0B5-                172       ;               rol                                     ; Shift input bit to carry flag
+E0B5-                173       ;               rol spi_readbuffer              ; Shift carry into readbuffer
+E0B5-                174
+E0B5-                175       ;               dec VIA_DATAB                   ; set clock low
+E0B5-                176       ;.endscope
+E0B5-                177       ;.endrepeat
+E0B5-                178
+E0B5-                179       ;               lda spi_readbuffer              ; result goes in A
+E0B5-                180       ;               rts
+E0B5-                181       ;.endproc
+E0B5-                182       ;-------------------------------------------------------------------------
+FD00                183                       .NO     $FD00
+FD00-                184                       .TA     $1D00
+FD00-                185       ;-------------------------------------------------------------------------
+FD00-                186       ;       Vector Table
+FD00-                187       ;-------------------------------------------------------------------------
+FD00-                188       JMP_VEC
+FD00-4C 00 E0        189 (  3) START_VEC       JMP     START
+FD03-                190       ;-------------------------------------------------------------------------
+FD03-                191       ;  Let's get started
+FD03-                192       ;
+FD03-                193       ;  Remark the RESET routine is only to be entered by asserting the RESET
+FD03-                194       ;  line of the system. This ensures that the data direction registers
+FD03-                195       ;  are selected.
+FD03-                196       ;------------------------------------------------------------------------
+FD03-D8              197 (  2) RESET           CLD                     Clear decimal arithmetic mode
+FD04-58              198 (  2)                 CLI
+FD05-A0 7F           199 (  2)                 LDY     #%0111.1111     Mask for DSP data direction reg
+FD07-8C 12 D0        200 (  4)                 STY     DSP              (DDR mode is assumed after reset)
+FD0A-A9 A7           201 (  2)                 LDA     #%1010.0111     KBD and DSP control register mask
+FD0C-8D 11 D0        202 (  4)                 STA     KBDCR           Enable interrupts, set CA1, CB1 for
+FD0F-8D 13 D0        203 (  4)                 STA     DSPCR            positive edge sense/output mode.
+FD12-                204
+FD12-                205       ; Program falls through to the GETLINE routine to save some program bytes
+FD12-                206       ; Please note that Y still holds $7F, which will cause an automatic Escape
+FD12-                207
+FD12-A9 33           208 (  2)                 LDA     #BOOTMSG&$FF
+FD14-85 2C           209 (  2)                 STA     STRL
+FD16-A9 FF           210 (  2)                 LDA     #BOOTMSG>>8
+FD18-85 2D           211 (  2)                 STA     STRH
+FD1A-20 89 FE        212 (  6)                 JSR     STRECHO
+FD1D-A9 00           213 (  2)                 LDA     #0
+FD1F-                214       ;-------------------------------------------------------------------------
+FD1F-                215       ; The GETLINE process
+FD1F-                216       ;-------------------------------------------------------------------------
+FD1F-                217
+FD1F-C9 DF           218 (  2) NOTCR           CMP     #BS             Backspace key?
+FD21-F0 13           219 (2**)                 BEQ     BACKSPACE       Yes
+FD23-C9 9B           220 (  2)                 CMP     #ESC            ESC?
+FD25-F0 03           221 (2**)                 BEQ     ESCAPE          Yes
+FD27-C8              222 (  2)                 INY                     Advance text index
+FD28-10 0F           223 (2**)                 BPL     NEXTCHAR        Auto ESC if line longer than 127
+FD2A-                224
+FD2A-A9 3E           225 (  2) ESCAPE          LDA     #PROMPT         Print prompt character
+FD2C-20 33 FE        226 (  6)                 JSR     ECHO            Output it.
+FD2F-                227
+FD2F-A9 8D           228 (  2) GETLINE         LDA     #CR             Send CR
+FD31-20 33 FE        229 (  6)                 JSR     ECHO
+FD34-                230
+FD34-A0 01           231 (  2)                 LDY     #0+1            Start a new input line
+FD36-88              232 (  2) BACKSPACE       DEY                     Backup text index
+FD37-30 F6           233 (2**)                 BMI     GETLINE         Oops, line's empty, reinitialize
+FD39-                234
+FD39-AD 11 D0        235 (  4) NEXTCHAR        LDA     KBDCR           Wait for key press
+FD3C-10 FB           236 (2**)                 BPL     NEXTCHAR        No key yet!
+FD3E-AD 10 D0        237 (  4)                 LDA     KBD             Load character. B7 should be '1'
+FD41-99 00 02        238 (  5)                 STA     IN,Y            Add to text buffer
+FD44-20 33 FE        239 (  6)                 JSR     ECHO            Display character
+FD47-C9 8D           240 (  2)                 CMP     #CR
+FD49-D0 D4           241 (2**)                 BNE     NOTCR           It's not CR!
+FD4B-                242
+FD4B-                243       ; Line received, now let's parse it
+FD4B-                244
+FD4B-A0 FF           245 (  2)                 LDY     #-1             Reset text index
+FD4D-A9 00           246 (  2)                 LDA     #0              Default mode is XAM
+FD4F-AA              247 (  2)                 TAX                     X=0
+FD50-                248
+FD50-0A              249 (  2) SETSTOR         ASL                     Leaves $7B if setting STOR mode
+FD51-                250
+FD51-85 2B           251 (  2) SETMODE         STA     MODE            Set mode flags
+FD53-                252
+FD53-C8              253 (  2) BLSKIP          INY                     Advance text index
+FD54-                254
+FD54-B9 00 02        255 ( 4*) NEXTITEM        LDA     IN,Y            Get character
+FD57-C9 8D           256 (  2)                 CMP     #CR
+FD59-F0 D4           257 (2**)                 BEQ     GETLINE         We're done if it's CR!
+FD5B-C9 AE           258 (  2)                 CMP     #"."
+FD5D-90 F4           259 (2**)                 BCC     BLSKIP          Ignore everything below "."!
+FD5F-F0 F0           260 (2**)                 BEQ     SETMODE         Set BLOCK XAM mode ("." = $AE)
+FD61-C9 BA           261 (  2)                 CMP     #":"
+FD63-F0 EB           262 (2**)                 BEQ     SETSTOR         Set STOR mode! $BA will become $7B
+FD65-C9 C9           263 (  2)                 CMP     #"I"
+FD67-F0 43           264 (2**)                 BEQ     CLRRAM
+FD69-C9 D3           265 (  2)                 CMP     #"S"
+FD6B-F0 93           266 (2**)                 BEQ     START_VEC
+FD6D-C9 D2           267 (  2)                 CMP     #"R"
+FD6F-F0 67           268 (2**)                 BEQ     RUN             Run the program! Forget the rest
+FD71-86 28           269 (  3)                 STX     L               Clear input value (X=0)
+FD73-86 29           270 (  3)                 STX     H
+FD75-84 2A           271 (  3)                 STY     YSAV            Save Y for comparison
+FD77-                272
+FD77-                273       ; Here we're trying to parse a new hex value
+FD77-                274
+FD77-B9 00 02        275 ( 4*) NEXTHEX         LDA     IN,Y            Get character for hex test
+FD7A-49 B0           276 (  2)                 EOR     #$B0            Map digits to 0-9
+FD7C-C9 0A           277 (  2)                 CMP     #9+1            Is it a decimal digit?
+FD7E-90 06           278 (2**)                 BCC     DIG             Yes!
+FD80-69 88           279 (  2)                 ADC     #$88            Map letter "A"-"F" to $FA-FF
+FD82-C9 FA           280 (  2)                 CMP     #$FA            Hex letter?
+FD84-90 11           281 (2**)                 BCC     NOTHEX          No! Character not hex
+FD86-                282
+FD86-0A              283 (  2) DIG             ASL
+FD87-0A              284 (  2)                 ASL                     Hex digit to MSD of A
+FD88-0A              285 (  2)                 ASL
+FD89-0A              286 (  2)                 ASL
+FD8A-                287
+FD8A-A2 04           288 (  2)                 LDX     #4              Shift count
+FD8C-0A              289 (  2) HEXSHIFT        ASL                     Hex digit left, MSB to carry
+FD8D-26 28           290 (  5)                 ROL     L               Rotate into LSD
+FD8F-26 29           291 (  5)                 ROL     H               Rotate into MSD's
+FD91-CA              292 (  2)                 DEX                     Done 4 shifts?
+FD92-D0 F8           293 (2**)                 BNE     HEXSHIFT        No, loop
+FD94-C8              294 (  2)                 INY                     Advance text index
+FD95-D0 E0           295 (2**)                 BNE     NEXTHEX         Always taken
+FD97-                296
+FD97-C4 2A           297 (  3) NOTHEX          CPY     YSAV            Was at least 1 hex digit given?
+FD99-F0 8F           298 (2**)                 BEQ     ESCAPE          No! Ignore all, start from scratch
+FD9B-                299
+FD9B-24 2B           300 (  3)                 BIT     MODE            Test MODE byte
+FD9D-50 3C           301 (2**)                 BVC     NOTSTOR         B6=0 is STOR, 1 is XAM or BLOCK XAM
+FD9F-                302
+FD9F-                303       ; STOR mode, save LSD of new hex byte
+FD9F-                304
+FD9F-A5 28           305 (  3)                 LDA     L               LSD's of hex data
+FDA1-81 26           306 (  6)                 STA     (STL,X)         Store current 'store index'(X=0)
+FDA3-E6 26           307 (  5)                 INC     STL             Increment store index.
+FDA5-D0 AD           308 (2**)                 BNE     NEXTITEM        No carry!
+FDA7-E6 27           309 (  5)                 INC     STH             Add carry to 'store index' high
+FDA9-4C 54 FD        310 (  3) TONEXTITEM      JMP     NEXTITEM        Get next command item.
+FDAC-                311
+FDAC-                312       ;--------------------------------------------------------------------------
+FDAC-                313       ;       Clear Memory
+FDAC-                314       ;--------------------------------------------------------------------------
+FDAC-A9 AC           315 (  2) CLRRAM          LDA     #RTASMSG &$FF
+FDAE-85 2C           316 (  2)                 STA     STRL
+FDB0-A9 FF           317 (  2)                 LDA     #RTASMSG>>8
+FDB2-85 2D           318 (  2)                 STA     STRH
+FDB4-20 89 FE        319 (  6)                 JSR     STRECHO
+FDB7-20 3C FE        320 (  6)                 JSR     RAMTAS
+FDBA-20 9A FE        321 (  6)                 JSR     BINBCD16
+FDBD-A9 16           322 (  2)                 LDA     #NUMSTR &$FF
+FDBF-85 2C           323 (  2)                 STA     STRL
+FDC1-A9 00           324 (  2)                 LDA     #NUMSTR>>8
+FDC3-85 2D           325 (  2)                 STA     STRH
+FDC5-20 89 FE        326 (  6)                 JSR     STRECHO
+FDC8-A9 9E           327 (  2)                 LDA     #MEMMSG &$FF
+FDCA-85 2C           328 (  2)                 STA     STRL
+FDCC-A9 FF           329 (  2)                 LDA     #MEMMSG>>8
+FDCE-85 2D           330 (  2)                 STA     STRH
+FDD0-20 89 FE        331 (  6)                 JSR     STRECHO
+FDD3-A0 7F           332 (  2)                 LDY     #$7F
+FDD5-4C 1F FD        333 (  3)                 JMP     NOTCR
+FDD8-                334
+FDD8-                335       ;-------------------------------------------------------------------------
+FDD8-                336       ;  RUN user's program from last opened location
+FDD8-                337       ;-------------------------------------------------------------------------
+FDD8-6C 24 00        338 (  5) RUN             JMP     (XAML)          Run user's program
+FDDB-                339       ;-------------------------------------------------------------------------
+FDDB-                340       ;  We're not in Store mode
+FDDB-                341       ;-------------------------------------------------------------------------
+FDDB-                342
+FDDB-30 2B           343 (2**) NOTSTOR         BMI     XAMNEXT         B7 = 0 for XAM, 1 for BLOCK XAM
+FDDD-                344
+FDDD-                345       ; We're in XAM mode now
+FDDD-                346
+FDDD-A2 02           347 (  2)                 LDX     #2              Copy 2 bytes
+FDDF-B5 27           348 (  4) SETADR          LDA     L-1,X           Copy hex data to
+FDE1-95 25           349 (  4)                 STA     STL-1,X          'store index'
+FDE3-95 23           350 (  4)                 STA     XAML-1,X         and to 'XAM index'
+FDE5-CA              351 (  2)                 DEX                     Next of 2 bytes
+FDE6-D0 F7           352 (2**)                 BNE     SETADR          Loop unless X = 0
+FDE8-                353
+FDE8-                354       ; Print address and data from this address, fall through next BNE.
+FDE8-                355
+FDE8-D0 14           356 (2**) NXTPRNT         BNE     PRDATA          NE means no address to print
+FDEA-A9 8D           357 (  2)                 LDA     #CR             Print CR first
+FDEC-20 33 FE        358 (  6)                 JSR     ECHO
+FDEF-A5 25           359 (  3)                 LDA     XAMH            Output high-order byte of address
+FDF1-20 20 FE        360 (  6)                 JSR     PRBYTE
+FDF4-A5 24           361 (  3)                 LDA     XAML            Output low-order byte of address
+FDF6-20 20 FE        362 (  6)                 JSR     PRBYTE
+FDF9-A9 BA           363 (  2)                 LDA     #":"            Print colon
+FDFB-20 33 FE        364 (  6)                 JSR     ECHO
+FDFE-                365
+FDFE-A9 A0           366 (  2) PRDATA          LDA     #" "            Print space
+FE00-20 33 FE        367 (  6)                 JSR     ECHO
+FE03-A1 24           368 (  6)                 LDA     (XAML,X)        Get data from address (X=0)
+FE05-20 20 FE        369 (  6)                 JSR     PRBYTE          Output it in hex format
+FE08-86 2B           370 (  3) XAMNEXT         STX     MODE            0 -> MODE (XAM mode).
+FE0A-A5 24           371 (  3)                 LDA     XAML            See if there's more to print
+FE0C-C5 28           372 (  3)                 CMP     L
+FE0E-A5 25           373 (  3)                 LDA     XAMH
+FE10-E5 29           374 (  3)                 SBC     H
+FE12-B0 95           375 (2**)                 BCS     TONEXTITEM      Not less! No more data to output
+FE14-                376
+FE14-E6 24           377 (  5)                 INC     XAML            Increment 'examine index'
+FE16-D0 02           378 (2**)                 BNE     MOD8CHK         No carry!
+FE18-E6 25           379 (  5)                 INC     XAMH
+FE1A-                380
+FE1A-A5 24           381 (  3) MOD8CHK         LDA     XAML            If address MOD 8 = 0 start new line
+FE1C-29 07           382 (  2)                 AND     #%0000.0111
+FE1E-10 C8           383 (2**)                 BPL     NXTPRNT         Always taken.
+FE20-                384
+FE20-                385       ;-------------------------------------------------------------------------
+FE20-                386       ;  Subroutine to print a byte in A in hex form (destructive)
+FE20-                387       ;-------------------------------------------------------------------------
+FE20-                388
+FE20-48              389 (  3) PRBYTE          PHA                     Save A for LSD
+FE21-4A              390 (  2)                 LSR
+FE22-4A              391 (  2)                 LSR
+FE23-4A              392 (  2)                 LSR                     MSD to LSD position
+FE24-4A              393 (  2)                 LSR
+FE25-20 29 FE        394 (  6)                 JSR     PRHEX           Output hex digit
+FE28-68              395 (  4)                 PLA                     Restore A
+FE29-                396
+FE29-                397       ; Fall through to print hex routine
+FE29-                398
+FE29-                399       ;-------------------------------------------------------------------------
+FE29-                400       ;  Subroutine to print a hexadecimal digit
+FE29-                401       ;-------------------------------------------------------------------------
+FE29-                402
+FE29-29 0F           403 (  2) PRHEX           AND     #%0000.1111     Mask LSD for hex print
+FE2B-09 B0           404 (  2)                 ORA     #"0"            Add "0"
+FE2D-C9 BA           405 (  2)                 CMP     #"9"+1          Is it a decimal digit?
+FE2F-90 02           406 (2**)                 BCC     ECHO            Yes! output it
+FE31-69 06           407 (  2)                 ADC     #6              Add offset for letter A-F
+FE33-                408
+FE33-                409       ; Fall through to print routine
+FE33-                410
+FE33-                411       ;-------------------------------------------------------------------------
+FE33-                412       ;  Subroutine to print a character to the terminal
+FE33-                413       ;-------------------------------------------------------------------------
+FE33-                414
+FE33-2C 12 D0        415 (  4) ECHO            BIT     DSP             DA bit (B7) cleared yet?
+FE36-30 FB           416 (2**)                 BMI     ECHO            No! Wait for display ready
+FE38-8D 12 D0        417 (  4)                 STA     DSP             Output character. Sets DA
+FE3B-60              418 (  6)                 RTS
+FE3C-                419       ;-------------------------------------------------------------------------
+FE3C-                420       ;  RAM TEST [Commodore 64 method]
+FE3C-                421       ;-------------------------------------------------------------------------
+FE3C-98              422 (  2) RAMTAS          TYA
+FE3D-48              423 (  3)                 PHA
+FE3E-A9 00           424 (  2)                 LDA     #0
+FE40-98              425 (  2)                 TYA
+FE41-99 02 00        426 (  5) RAMTZ0          STA     $0002,Y
+FE44-99 00 02        427 (  5)                 STA     $0200,Y
+FE47-99 00 03        428 (  5)                 STA     $0300,Y
+FE4A-C8              429 (  2)                 INY
+FE4B-D0 F4           430 (2**)                 BNE     RAMTZ0
+FE4D-98              431 (  2) RAMTBT          TYA
+FE4E-A9 03           432 (  2)                 LDA     #3
+FE50-85 C2           433 (  2)                 STA     TMP0+1
+FE52-A9 2E           434 (  2) RAMTZ1          LDA     #'.'
+FE54-20 33 FE        435 (  6)                 JSR     ECHO
+FE57-E6 C2           436 (  5)                 INC     TMP0+1
+FE59-B1 C1           437 ( 5*) RAMTZ2          LDA     (TMP0),Y
+FE5B-AA              438 (  2)                 TAX
+FE5C-A9 55           439 (  2)                 LDA     #$55
+FE5E-91 C1           440 (  6)                 STA     (TMP0),Y
+FE60-D1 C1           441 ( 5*)                 CMP     (TMP0),Y
+FE62-D0 0F           442 (2**)                 BNE     SIZE
+FE64-2A              443 (  2)                 ROL     A
+FE65-91 C1           444 (  6)                 STA     (TMP0),Y
+FE67-D1 C1           445 ( 5*)                 CMP     (TMP0),Y
+FE69-D0 08           446 (2**)                 BNE     SIZE
+FE6B-AA              447 (  2)                 TAX
+FE6C-91 C1           448 (  6)                 STA     (TMP0),Y
+FE6E-C8              449 (  2)                 INY
+FE6F-D0 E8           450 (2**)                 BNE     RAMTZ2
+FE71-F0 DF           451 (2**)                 BEQ     RAMTZ1
+FE73-98              452 (  2) SIZE            TYA
+FE74-AA              453 (  2)                 TAX
+FE75-A4 C2           454 (  3)                 LDY     TMP0+1
+FE77-18              455 (  2)                 CLC
+FE78-86 2E           456 (  3)                 STX     MEMSZL
+FE7A-84 2F           457 (  3)                 STY     MEMSZH
+FE7C-A9 0A           458 (  2)                 LDA     #$0A
+FE7E-20 33 FE        459 (  6)                 JSR     ECHO
+FE81-A9 0D           460 (  2)                 LDA     #$0D
+FE83-20 33 FE        461 (  6)                 JSR     ECHO
+FE86-68              462 (  4)                 PLA
+FE87-A8              463 (  2)                 TAY
+FE88-60              464 (  6)                 RTS
+FE89-                465
+FE89-                466       ;---------------------------------------------------------------------------------
+FE89-                467       ;   String Echo
+FE89-                468       ;---------------------------------------------------------------------------------
+FE89-                469
+FE89-                470       STRECHO
+FE89-98              471 (  2)                 TYA
+FE8A-48              472 (  3)                 PHA     ;-- Sanatize Y Register --------------------------------
+FE8B-                473
+FE8B-A0 00           474 (  2)                 LDY     #$0
+FE8D-B1 2C           475 ( 5*) .LOOP           LDA     (STRL),Y
+FE8F-F0 06           476 (2**)                 BEQ     .JMPOUT
+FE91-20 33 FE        477 (  6)                 JSR     ECHO
+FE94-C8              478 (  2)                 INY
+FE95-D0 F6           479 (2**)                 BNE     .LOOP
+FE97-                480
+FE97-68              481 (  4) .JMPOUT         PLA
+FE98-A8              482 (  2)                 TAY
+FE99-60              483 (  6)                 RTS
+FE9A-                484
+FE9A-                485       ;-------------------------------------------------------------------------------
+FE9A-                486       ;      BINBCD16 borrowed from Andrew Jacobs, 28-Feb-2004
+FE9A-                487       ;-------------------------------------------------------------------------------
+FE9A-                488
+FE9A-                489       BINBCD16
+FE9A-F8              490 (  2)                 SED                  ; Switch to decimal mode        2
+FE9B-A9 00           491 (  2)                 LDA     #0           ; Ensure the result is clear    2
+FE9D-85 10           492 (  2)                 STA     BCD+0        ;                               3
+FE9F-85 11           493 (  2)                 STA     BCD+1        ;                               3
+FEA1-85 12           494 (  2)                 STA     BCD+2        ;                               3       13
+FEA3-                495
+FEA3-06 2E           496 (  5) CBIT1           ASL     MEMSZL       ; Shift out one bit             5
+FEA5-26 2F           497 (  5)                 ROL     MEMSZL+1     ;                               5
+FEA7-                498       ;               LDA     bcd+0        ;
+FEA7-65 10           499 (  3)                 ADC     BCD+0        ; And add into result           3
+FEA9-85 10           500 (  2)                 STA     BCD+0        ;                               3
+FEAB-06 2E           501 (  5)                 ASL     MEMSZL       ;                               5
+FEAD-26 2F           502 (  5)                 ROL     MEMSZL+1     ;                               5
+FEAF-65 10           503 (  3)                 ADC     BCD+0        ;                               3
+FEB1-85 10           504 (  2)                 STA     BCD+0        ;                               3
+FEB3-06 2E           505 (  5)                 ASL     MEMSZL       ;                               5
+FEB5-26 2F           506 (  5)                 ROL     MEMSZL+1     ;                               5
+FEB7-65 10           507 (  3)                 ADC     BCD+0        ;                               3
+FEB9-85 10           508 (  2)                 STA     BCD+0        ;                               3
+FEBB-06 2E           509 (  5)                 ASL     MEMSZL       ;                               5
+FEBD-26 2F           510 (  5)                 ROL     MEMSZL+1     ;                               5
+FEBF-65 10           511 (  3)                 ADC     BCD+0        ;                               3
+FEC1-85 10           512 (  2)                 STA     BCD+0        ;                               3
+FEC3-06 2E           513 (  5)                 ASL     MEMSZL       ;                               5
+FEC5-26 2F           514 (  5)                 ROL     MEMSZL+1     ;                               5
+FEC7-65 10           515 (  3)                 ADC     BCD+0        ;                               3
+FEC9-85 10           516 (  2)                 STA     BCD+0        ;                               3
+FECB-06 2E           517 (  5)                 ASL     MEMSZL       ;                               5
+FECD-26 2F           518 (  5)                 ROL     MEMSZL+1     ;                               5
+FECF-65 10           519 (  3)                 ADC     BCD+0        ;                               3
+FED1-85 10           520 (  2)                 STA     BCD+0        ;                               3       96
+FED3-                521
+FED3-A2 07           522 (  2)                 LDX     #7           ;                               2       2
+FED5-06 2E           523 (  5) CBIT7           ASL     MEMSZL       ; Shift out one bit             5
+FED7-26 2F           524 (  5)                 ROL     MEMSZL+1     ;                               5
+FED9-A5 10           525 (  3)                 LDA     BCD+0        ; And add into result           3
+FEDB-65 10           526 (  3)                 ADC     BCD+0        ;                               3
+FEDD-85 10           527 (  2)                 STA     BCD+0        ;                               3
+FEDF-A5 11           528 (  3)                 LDA     BCD+1        ; propagating any carry         3
+FEE1-65 11           529 (  3)                 ADC     BCD+1        ;                               3
+FEE3-85 11           530 (  2)                 STA     BCD+1        ;                               3
+FEE5-CA              531 (  2)                 DEX                  ; And repeat for next bit       2
+FEE6-D0 ED           532 (2**)                 BNE     CBIT7        ;                               3       33*7-1=230
+FEE8-                533
+FEE8-A2 03           534 (  2)                 LDX     #3           ;                               2       2
+FEEA-06 2E           535 (  5) CBIT13          ASL     MEMSZL       ; Shift out one bit             5
+FEEC-26 2F           536 (  5)                 ROL     MEMSZL+1     ;                               5
+FEEE-A5 10           537 (  3)                 LDA     BCD+0        ; And add into result           3
+FEF0-65 10           538 (  3)                 ADC     BCD+0        ;                               3
+FEF2-85 10           539 (  2)                 STA     BCD+0        ;                               3
+FEF4-A5 11           540 (  3)                 LDA     BCD+1        ; propagating any carry         3
+FEF6-65 11           541 (  3)                 ADC     BCD+1        ;                               3
+FEF8-85 11           542 (  2)                 STA     BCD+1        ;                               3
+FEFA-A5 12           543 (  3)                 LDA     BCD+2        ; ... thru whole result         3
+FEFC-65 12           544 (  3)                 ADC     BCD+2        ;                               3
+FEFE-85 12           545 (  2)                 STA     BCD+2        ;                               3
+FF00-CA              546 (  2)                 DEX                  ; And repeat for next bit       2
+FF01-D0 E7           547 (2**)                 BNE     CBIT13       ;                               3       42*3-1=125
+FF03-D8              548 (  2)                 CLD                  ; Back to binary                2       2; tot 470
+FF04-29 0F           549 (  2)                 AND     #$0F
+FF06-09 30           550 (  2)                 ORA     #$30
+FF08-85 17           551 (  2)                 STA     NUMSTR+1
+FF0A-A5 11           552 (  3)                 LDA     BCD+1
+FF0C-29 0F           553 (  2)                 AND     #$0F
+FF0E-09 30           554 (  2)                 ORA     #$30
+FF10-85 19           555 (  2)                 STA     NUMSTR+3
+FF12-A5 11           556 (  3)                 LDA     BCD+1
+FF14-4A              557 (  2)                 LSR
+FF15-4A              558 (  2)                 LSR
+FF16-4A              559 (  2)                 LSR
+FF17-4A              560 (  2)                 LSR
+FF18-09 30           561 (  2)                 ORA     #$30
+FF1A-85 18           562 (  2)                 STA     NUMSTR+2
+FF1C-A5 10           563 (  3)                 LDA     BCD+0
+FF1E-29 0F           564 (  2)                 AND     #$0F
+FF20-09 30           565 (  2)                 ORA     #$30
+FF22-85 1B           566 (  2)                 STA     NUMSTR+5
+FF24-A5 10           567 (  3)                 LDA     BCD+0
+FF26-4A              568 (  2)                 LSR
+FF27-4A              569 (  2)                 LSR
+FF28-4A              570 (  2)                 LSR
+FF29-4A              571 (  2)                 LSR
+FF2A-09 30           572 (  2)                 ORA     #$30
+FF2C-85 1A           573 (  2)                 STA     NUMSTR+4
+FF2E-A9 14           574 (  2)                 LDA     #20
+FF30-85 16           575 (  2)                 STA     NUMSTR+0
+FF32-60              576 (  6)                 RTS                  ; All Done.
+FF33-                577       ;-----------------------------------------------------------------------------------
+FF33-                578       ; Message Strings
+FF33-                579       ;-----------------------------------------------------------------------------------
+FF33-01 01 20 56 
+     49 41 20 44 
+     45 56 4B 49 
+     54 20 56 20 
+     31 2E 30 41 
+     20 77 69 74 
+     68 20 57 4F 
+     5A 4D 4F 4E 
+     20 28 63 29 
+     20 53 74 65 
+     76 65 20 57 
+     6F 7A 6E 69 
+     61 6B 20 31 
+     39 37 36 20 
+     28 43 29 64 
+     61 6E 6E 79 
+     61 72 6E 6F 
+     6C 64 2E 63 
+     6F 6D 20 32 
+     30 32 31 20 
+     0D 02 0A 5B 
+     49 5D 6E 69 
+     74 69 61 6C 
+     69 7A 65 20 
+     4D 65 6D 6F 
+     72 79 20 3F 
+     0A 0D 00        580       BOOTMSG         .AZ     #$01,#$01,/ VIA DEVKIT V 1.0A with WOZMON (c) Steve Wozniak 1976 (C)dannyarnold.com 2021 /,#$0D,#$02,#$0A,/[I]nitialize Memory ?/,#$0A,#$0D
+FF9E-20 42 59 54 
      45 53 20 46 
      52 45 45 0A 
-     0D 00           472       MEMMSG          .AZ     / BYTES FREE/,#$0A,#$0D
-FF83-54 45 53 54 
+     0D 00           581       MEMMSG          .AZ     / BYTES FREE/,#$0A,#$0D
+FFAC-54 45 53 54 
      49 4E 47 20 
      4D 45 4D 4F 
      52 59 0A 0D 
-     00              473       RTASMSG         .AZ     /TESTING MEMORY/,#$0A,#$0D
-FF94-                474       ;-------------------------------------------------------------------------
-FF94-                475       ;  Vector area
-FF94-                476       ;-------------------------------------------------------------------------
-FF94-                477       ;
-FFF8                478                       .NO     $FFF8
-FFF8-00 00           479                       .DA     $0000           Unused, what a pity
-FFFA-00 0F           480       NMI_VEC         .DA     $0F00           NMI vector
-FFFC-03 FD           481       RESET_VEC       .DA     RESET           RESET vector
-FFFE-03 FD           482       IRQ_VEC         .DA     RESET           IRQ vector
+     00              582       RTASMSG         .AZ     /TESTING MEMORY/,#$0A,#$0D
+FFBD-                583       ;-------------------------------------------------------------------------
+FFBD-                584       ;  BOOT Vectors
+FFBD-                585       ;-------------------------------------------------------------------------
+FFBD-                586       ;
+FFF8                587                       .NO     $FFF8
+FFF8-00 00           588                       .DA     $0000           Unused, what a pity
+FFFA-00 0F           589       NMI_VEC         .DA     $0F00           NMI vector
+FFFC-03 FD           590       RESET_VEC       .DA     RESET           RESET vector
+FFFE-03 FD           591       IRQ_VEC         .DA     RESET           IRQ vector
